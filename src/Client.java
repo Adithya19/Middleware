@@ -40,6 +40,9 @@ public class Client {
                     // invoke duplicate message
                     sendDuplicateMessage(publisher, name, channel);
                     continue;
+                } else if (input.equals("SpamQuery")){
+                    spamQueries(channel, publisher);
+                    continue;
                 }
                 // sending out the epoch time, pubid, channelname and the message
                 publisher.publish(System.currentTimeMillis(), name, channel, input);   // send the message to the middleware
@@ -53,7 +56,7 @@ public class Client {
             String channels = reader.readLine();
             Arrays.stream(channels.split(",")).forEach(e -> System.out.println(e));
 
-            System.out.println("Enter the channel you want to subscribe to");
+            System.out.println("Enter the channels you want to subscribe to separated by a comma");
             input = scanner.nextLine();
             writer.println(input);                      // send the channel you want to subscribe to
             while(true){
@@ -84,5 +87,18 @@ public class Client {
             e.printStackTrace();
         }
         publisher.publish(epoch, pubId, channelName, "Duplicate message");
+    }
+
+    /**
+     * This methods helps in demonstrating how the pub sub can handle increasing number of queries
+     * By spamming the middleware
+     * @param channelName Channel to send messages to
+     * @param publisher
+     */
+    public static void spamQueries(String channelName, Publisher publisher){
+        System.out.println("Going to send large numbeer of queries to teh channel");
+        for(int i = 0; i < 10000; i++){
+            publisher.publish(new Long(i).longValue(), "pub1", channelName, "Query" + i);
+        }
     }
 }

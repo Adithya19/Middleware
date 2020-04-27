@@ -1,12 +1,15 @@
-public class Subscriber {
-    String name;
-    String channel;
+import java.net.Socket;
 
-    public Subscriber(String name){
-        this.name = name;
+public class Subscriber {
+    String channel;
+    Socket socket;
+
+    public Subscriber(Socket socket){
+        this.socket = socket;
     }
 
-    public void subscribe(){
-        // subscribe to the channel.
+    public void subscribe(String channelName){
+        Channel channel = Middleware.channelHashMap.get(channelName);
+        channel.subscribe(socket);
     }
 }

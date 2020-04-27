@@ -27,4 +27,9 @@ public class Event implements Comparable{
         else
             return 0;
     }
+
+    @Override
+    public String toString(){
+        return payload;
+    }
 }

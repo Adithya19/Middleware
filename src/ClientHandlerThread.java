@@ -29,7 +29,8 @@ public class ClientHandlerThread implements Runnable{
             pw.println("Hello from the server");
             while(true){
                 input = reader.readLine();
-
+                if(input == null)
+                    return;
                 if(input.equals("publisher")){
                     System.out.println("The client chose to be a publisher");
                     String pubName = reader.readLine();
@@ -42,12 +43,9 @@ public class ClientHandlerThread implements Runnable{
                     }
                     while(true) {
                         String message = reader.readLine();
-                        System.out.println("Client's Event : "  + message);
                         messages = message.split(", ");
                         Event event = new Event(Long.parseLong(messages[0]), messages[1], messages[3]);
                         String channelname = messages[2];
-                        System.out.println("The channel is " + channelname); // splitting the channel name and message
-                        System.out.println("The message is " + messages[3]);
 
                         sendToChannel(channelname, event);
                     }
@@ -60,8 +58,10 @@ public class ClientHandlerThread implements Runnable{
                     pw.println(channels);
 
                     String channelName = reader.readLine();     // waiting for the subscriber to send the name of the topic
-                    Channel channel = Middleware.channelHashMap.get(channelName);
-                    channel.subscribe(socket);
+                    if(channelName == null)
+                        return;
+                    Subscriber subscriber = new Subscriber(socket);
+                    subscriber.subscribe(channelName);
                 }
 
 
@@ -76,7 +76,7 @@ public class ClientHandlerThread implements Runnable{
      * @return
      */
     public String getChannels(){
-        StringBuilder channels = new StringBuilder("");
+        StringBuilder channels = new StringBuilder(" ");
         for (Map.Entry<String, Channel> entry : Middleware.channelHashMap.entrySet()) {
             channels.append(entry.getKey() + ",");
         }

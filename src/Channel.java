@@ -3,6 +3,7 @@ import java.io.PrintWriter;
 import java.lang.reflect.Array;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -18,9 +19,6 @@ public class Channel implements Runnable{
         this.name = name;
     }
 
-//    public Channel(String name, Queue<String> queue){
-//        this.messageQueue = queue;
-//    }
 
     public void push(String message){
         System.out.println(subscribers);
@@ -43,6 +41,7 @@ public class Channel implements Runnable{
 
     @Override
     public void run() {
+        System.out.println("Starting channel thread");
         Event event;
         while(true){
             try {
@@ -75,7 +74,7 @@ public class Channel implements Runnable{
             Queue<Event> newBackupQueue = new LinkedList<>();
             messageQueues.add(newQueue);
             backupMessageQueues.add(newBackupQueue);
-            System.out.println("Size of new Q: " + messageQueues.size());
+//            System.out.println("Size of new Q: " + messageQueues.size());
         }
 
         // getting hold of the working queue and the backup queue.
@@ -109,7 +108,7 @@ public class Channel implements Runnable{
             messageQueues = backupMessageQueues;
             // create a duplicate backup message queue
         }
-        System.out.println("The message queuesss are : " + messageQueues);
+//        System.out.println("The message queuesss are : " + messageQueues);
     }
 
     public Event getEvent(){
@@ -118,13 +117,18 @@ public class Channel implements Runnable{
         Event event = null;
         for(int i = 0; i < messageQueues.size(); i++){
             queue = messageQueues.get(i);
+//            System.out.println("Looking at Q: " + i + ". " + queue);
             if(queue.size() <= 0){ // if any queue is empty then remove it
+//                System.out.println("Removing Q: " + i);
                 messageQueues.remove(queue);
             } else {
                 event = queue.remove();
                 if(event == null){ // the queue contains null messages
                     messageQueues = backupMessageQueues;
+                    i--;
+                    continue;
                 }
+                break;
             }
         }
         return event;
@@ -136,9 +140,13 @@ public class Channel implements Runnable{
      * @param event
      * @return
      */
-    public boolean checkForDuplicates(Event event){
+    public synchronized boolean checkForDuplicates(Event event){
         // loop through all the queues and check tf there is a duplicate message
-        for(Queue<Event> queue : messageQueues){
+
+        Iterator<Queue<Event>> iter = messageQueues.iterator();
+
+        for(int i = 0; i < messageQueues.size(); i++){
+            Queue<Event> queue = messageQueues.get(i);
             if(queue.contains(event)){
                 return true;
             }
