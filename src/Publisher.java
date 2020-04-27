@@ -10,9 +10,9 @@ public class Publisher {
         this.name = name;
     }
 
-    public void publish(String channel, String message){
+    public void publish(long epoch, String pubId, String channel, String message){
         // send the message to the channel and tell the middleware the channel you want to publish to.
-        writer.println(channel + ", " + message);
+        writer.println(epoch + ", " + pubId + ", " + channel + ", " + message);
     }
 
 }

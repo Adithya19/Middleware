@@ -11,8 +11,8 @@ public class Channel implements Runnable{
     ArrayList<Socket> subscribers = new ArrayList<>();
     PrintWriter writer;
     Queue<String> messageQueue;
-    ArrayList<Queue<String>> messageQueues = new ArrayList<>();
-    ArrayList<Queue<String>> backupMessageQueues = new ArrayList<>();
+    ArrayList<Queue<Event>> messageQueues = new ArrayList<>();
+    ArrayList<Queue<Event>> backupMessageQueues = new ArrayList<>();
     int queueSize = 2;
     public Channel(String name){
         this.name = name;
@@ -43,7 +43,7 @@ public class Channel implements Runnable{
 
     @Override
     public void run() {
-        String message;
+        Event event;
         while(true){
             try {
                 Thread.sleep(1);
@@ -51,9 +51,13 @@ public class Channel implements Runnable{
                 e.printStackTrace();
             }
             if(!subscribers.isEmpty()){
-                message = getMessage();
-                if(message!=null) {
-                    push(message);
+                event = getEvent();
+                if(event!=null) { // there are messages to send
+                    // need to check if this is a duplicate message
+                    // if so then don't send anything because another one will be sent later
+                    if(checkForDuplicates(event))
+                        continue;
+                    push(event.payload);
                 }
             }
         }
@@ -61,40 +65,43 @@ public class Channel implements Runnable{
 
     /**
      * Finds the earliest message to be sent from all the queues
-     * @param message The message to be sent to everyone
+     * @param event The message to be sent to everyone
      */
-    public void sendMessage(String message){
+    public void sendMessage(Event event){
         // find the last queue and add the message to that
         // if the last queue is full then create a new queue and add to that
         if(messageQueues.size() <= 0){
-            Queue<String> newQueue = new LinkedList<>();
-            Queue<String> newBackupQueue = new LinkedList<>();
+            Queue<Event> newQueue = new LinkedList<>();
+            Queue<Event> newBackupQueue = new LinkedList<>();
             messageQueues.add(newQueue);
             backupMessageQueues.add(newBackupQueue);
             System.out.println("Size of new Q: " + messageQueues.size());
         }
 
         // getting hold of the working queue and the backup queue.
-        Queue<String> queue = messageQueues.get(messageQueues.size() - 1);
-        Queue<String> backupQueue = backupMessageQueues.get(backupMessageQueues.size() - 1);
+        Queue<Event> queue = messageQueues.get(messageQueues.size() - 1);
+        Queue<Event> backupQueue = backupMessageQueues.get(backupMessageQueues.size() - 1);
 
         try{
             if(queue.size() >= queueSize){
-                Queue<String> newQueue = new LinkedList<>();
-                Queue<String> newBackupQueue = new LinkedList<>();
+                Queue<Event> newQueue = new LinkedList<>();
+                Queue<Event> newBackupQueue = new LinkedList<>();
                 // throw an excpetion for a certain message
-                if(message.trim().equals("CrashQueue"))
+                if(event.payload.trim().equals("CrashQueue"))
                     // this is done to simulate the queue crashing when it tries to add messages
                     throw new Exception("Queue has been crashed");
                 // adding the message to both the backup and the main queue
-                newQueue.add(message);
+                newQueue.add(event);
                 messageQueues.add(newQueue);
 
-                newBackupQueue.add(message);
+                newBackupQueue.add(event);
                 backupMessageQueues.add(newBackupQueue);
             } else {
-                queue.add(message);
-                backupQueue.add(message);
+                if(event.payload.trim().equals("CrashQueue"))
+                    // this is done to simulate the queue crashing when it tries to add messages
+                    throw new Exception("Queue has been crashed");
+                queue.add(event);
+                backupQueue.add(event);
             }
         }catch(Exception e){
             System.out.println("Queue crashed, switching it with the backup queue");
@@ -105,19 +112,38 @@ public class Channel implements Runnable{
         System.out.println("The message queuesss are : " + messageQueues);
     }
 
-    public String getMessage(){
+    public Event getEvent(){
         // loop through all the queues
-        Queue<String> queue = null;
-        String message = null;
+        Queue<Event> queue = null;
+        Event event = null;
         for(int i = 0; i < messageQueues.size(); i++){
             queue = messageQueues.get(i);
             if(queue.size() <= 0){ // if any queue is empty then remove it
                 messageQueues.remove(queue);
             } else {
-                message = queue.remove();
+                event = queue.remove();
+                if(event == null){ // the queue contains null messages
+                    messageQueues = backupMessageQueues;
+                }
             }
         }
-        return message;
+        return event;
     }
 
+    /**
+     * Checks all the queues to see if there is duplciate message
+     * Messaegs with the same timestamp and same sender
+     * @param event
+     * @return
+     */
+    public boolean checkForDuplicates(Event event){
+        // loop through all the queues and check tf there is a duplicate message
+        for(Queue<Event> queue : messageQueues){
+            if(queue.contains(event)){
+                return true;
+            }
+        }
+
+        return false;
+    }
 }
